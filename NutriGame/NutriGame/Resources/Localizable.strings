@@ -1,0 +1,118 @@
+/*
+  Localizable.strings
+  NutriGame
+
+  Portuguese (Brazil) - PT-BR
+*/
+
+// MARK: - General
+"app_name" = "NutriGame";
+"loading" = "Carregando...";
+"error" = "Erro";
+"success" = "Sucesso";
+"cancel" = "Cancelar";
+"confirm" = "Confirmar";
+"save" = "Salvar";
+"delete" = "Excluir";
+"edit" = "Editar";
+"done" = "Concluído";
+"next" = "Próximo";
+"back" = "Voltar";
+"skip" = "Pular";
+"start" = "Começar";
+"retry" = "Tentar novamente";
+"close" = "Fechar";
+
+// MARK: - Auth
+"login" = "Entrar";
+"logout" = "Sair";
+"signup" = "Criar Conta";
+"email" = "E-mail";
+"password" = "Senha";
+"name" = "Nome";
+"forgot_password" = "Esqueci minha senha";
+"continue_with_apple" = "Continuar com Apple";
+"continue_with_google" = "Continuar com Google";
+"continue_with_email" = "Continuar com E-mail";
+
+// MARK: - Onboarding
+"onboarding_title_1" = "Complete Missões";
+"onboarding_desc_1" = "Registre suas refeições e treinos diariamente para ganhar XP e subir de nível.";
+"onboarding_title_2" = "Suba no Ranking";
+"onboarding_desc_2" = "Compete com outros membros do seu squad no ranking semanal.";
+"onboarding_title_3" = "Mantenha seu Streak";
+"onboarding_desc_3" = "Complete pelo menos uma missão por dia para manter seu streak e ganhar bônus.";
+
+// MARK: - Squad
+"join_squad" = "Entrar no Squad";
+"create_squad" = "Criar Squad";
+"squad_code" = "Código do Squad";
+"enter_code" = "Digite o código fornecido pelo seu nutricionista";
+"i_am_nutritionist" = "Sou Nutricionista";
+"leave_squad" = "Sair do Squad";
+"squad_members" = "membros";
+
+// MARK: - Missions
+"daily_missions" = "Missões do Dia";
+"breakfast" = "Café da Manhã";
+"lunch" = "Almoço";
+"dinner" = "Jantar";
+"snack" = "Lanche";
+"workout" = "Treino";
+"hydration" = "Hidratação";
+"completed" = "Concluído";
+"glasses" = "copos";
+"take_photo" = "Tirar Foto";
+"choose_from_gallery" = "Escolher da Galeria";
+"confirm_photo" = "Confirmar";
+"retake_photo" = "Tirar Outra";
+
+// MARK: - Ranking
+"ranking" = "Ranking";
+"week" = "Semana";
+"your_position" = "Você está em";
+"place" = "lugar";
+"no_participants" = "Nenhum participante ainda";
+"complete_missions_to_rank" = "Complete missões para aparecer no ranking!";
+
+// MARK: - Profile
+"profile" = "Perfil";
+"settings" = "Configurações";
+"edit_profile" = "Editar Perfil";
+"visual_diary" = "Diário Visual";
+"view_all" = "Ver Todos";
+"total_xp" = "XP Total";
+"current_streak" = "Streak Atual";
+"longest_streak" = "Maior Streak";
+"level" = "Nível";
+"member_since" = "Membro desde";
+"my_squad" = "Meu Squad";
+
+// MARK: - Settings
+"account" = "Conta";
+"notifications" = "Notificações";
+"meal_reminders" = "Lembretes de refeições";
+"about" = "Sobre";
+"version" = "Versão";
+"terms_of_use" = "Termos de Uso";
+"privacy_policy" = "Política de Privacidade";
+"delete_account" = "Excluir Conta";
+"delete_account_warning" = "Esta ação é irreversível. Todos os seus dados serão perdidos permanentemente.";
+
+// MARK: - Gamification
+"xp" = "XP";
+"level_up" = "Subiu de Nível!";
+"daily_bonus" = "Bônus Diário";
+"streak" = "Streak";
+"days" = "dias";
+"day" = "dia";
+
+// MARK: - Errors
+"error_invalid_email" = "Por favor, insira um e-mail válido.";
+"error_invalid_password" = "A senha deve ter pelo menos 6 caracteres.";
+"error_invalid_name" = "O nome deve ter pelo menos 2 caracteres.";
+"error_invalid_squad_code" = "Código do squad inválido. Use 6 caracteres alfanuméricos.";
+"error_squad_not_found" = "Squad não encontrado. Verifique o código.";
+"error_squad_full" = "Este squad atingiu o limite de membros.";
+"error_network" = "Erro de conexão. Verifique sua internet.";
+"error_unknown" = "Ocorreu um erro. Tente novamente.";
