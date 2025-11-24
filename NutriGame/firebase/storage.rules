@@ -1,0 +1,106 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if file is an image
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Check if file size is within limit (500KB for compressed images)
+    function isUnderMaxSize(maxSizeKB) {
+      return request.resource.size < maxSizeKB * 1024;
+    }
+
+    // Check if user owns the file path
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // ============================================
+    // USER AVATARS
+    // Path: avatars/{userId}/{filename}
+    // ============================================
+    match /avatars/{userId}/{filename} {
+      // Anyone can read avatars (for profiles)
+      allow read: if true;
+
+      // Only owner can upload their avatar
+      allow write: if isAuthenticated() &&
+        isOwner(userId) &&
+        isImage() &&
+        isUnderMaxSize(500); // 500KB max for avatars
+
+      // Only owner can delete their avatar
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+
+    // ============================================
+    // MISSION PHOTOS
+    // Path: missions/{userId}/{date}/{filename}
+    // ============================================
+    match /missions/{userId}/{date}/{filename} {
+      // Authenticated users can read mission photos
+      // (for squad gallery, etc.)
+      allow read: if isAuthenticated();
+
+      // Only owner can upload their mission photos
+      allow write: if isAuthenticated() &&
+        isOwner(userId) &&
+        isImage() &&
+        isUnderMaxSize(500); // 500KB max for mission photos
+
+      // Mission photos cannot be deleted (preserve history)
+      allow delete: if false;
+    }
+
+    // ============================================
+    // SQUAD ASSETS (Future)
+    // Path: squads/{squadCode}/{filename}
+    // ============================================
+    match /squads/{squadCode}/{filename} {
+      // Anyone authenticated can read squad assets
+      allow read: if isAuthenticated();
+
+      // Only squad owners can upload (implemented via Cloud Functions)
+      allow write: if false;
+      allow delete: if false;
+    }
+
+    // ============================================
+    // TEMPORARY UPLOADS
+    // Path: temp/{userId}/{filename}
+    // Used for processing before final storage
+    // ============================================
+    match /temp/{userId}/{filename} {
+      // Only owner can access temp files
+      allow read: if isAuthenticated() && isOwner(userId);
+
+      // Only owner can upload temp files
+      allow write: if isAuthenticated() &&
+        isOwner(userId) &&
+        isImage() &&
+        isUnderMaxSize(5000); // 5MB max for temp (before compression)
+
+      // Only owner can delete temp files
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+
+    // ============================================
+    // DEFAULT: DENY ALL
+    // ============================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

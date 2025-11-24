@@ -1,0 +1,218 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user is the owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Get user data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if user belongs to the same squad
+    function isSameSquad(squadCode) {
+      return isAuthenticated() && getUserData().squadCode == squadCode;
+    }
+
+    // Check if user is squad owner
+    function isSquadOwner(squadCode) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/squads/$(squadCode)).data.ownerUserId == request.auth.uid;
+    }
+
+    // Validate string length
+    function isValidStringLength(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+
+    // Validate squad code format (6 alphanumeric uppercase)
+    function isValidSquadCode(code) {
+      return code is string &&
+        code.size() == 6 &&
+        code.matches('^[A-Z0-9]{6}$');
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if isAuthenticated();
+
+      // Only the user can create their own profile
+      allow create: if isOwner(userId) &&
+        // Required fields validation
+        request.resource.data.keys().hasAll(['name', 'email', 'createdAt']) &&
+        isValidStringLength(request.resource.data.name, 2, 50) &&
+        request.resource.data.email is string &&
+        request.resource.data.createdAt == request.time &&
+        // Default values
+        request.resource.data.get('level', 1) >= 1 &&
+        request.resource.data.get('totalXP', 0) >= 0 &&
+        request.resource.data.get('currentStreak', 0) >= 0 &&
+        request.resource.data.get('longestStreak', 0) >= 0 &&
+        request.resource.data.get('isNutritionist', false) is bool &&
+        request.resource.data.get('isPremium', false) is bool &&
+        request.resource.data.get('notificationsEnabled', true) is bool;
+
+      // Only the user can update their own profile
+      allow update: if isOwner(userId) &&
+        // Cannot change email or createdAt
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        // Validate updatable fields
+        (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'avatarUrl', 'squadCode', 'level', 'totalXP',
+                    'currentStreak', 'longestStreak', 'lastCompletedDate',
+                    'fcmToken', 'timezone', 'notificationsEnabled',
+                    'isPremium', 'premiumUntil', 'premiumFeatures']));
+
+      // Only the user can delete their own account
+      allow delete: if isOwner(userId);
+    }
+
+    // ============================================
+    // SQUADS COLLECTION
+    // ============================================
+    match /squads/{squadCode} {
+      // Anyone authenticated can read squads (to join)
+      allow read: if isAuthenticated();
+
+      // Any authenticated user can create a squad
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll(['name', 'ownerUserId', 'code', 'memberCount', 'createdAt']) &&
+        isValidStringLength(request.resource.data.name, 3, 50) &&
+        request.resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.code == squadCode &&
+        isValidSquadCode(squadCode) &&
+        request.resource.data.memberCount == 1 &&
+        request.resource.data.get('maxMembers', 100) <= 100 &&
+        request.resource.data.createdAt == request.time;
+
+      // Only squad owner can update (change name, settings)
+      allow update: if isSquadOwner(squadCode) &&
+        // Cannot change owner, code, or createdAt
+        request.resource.data.ownerUserId == resource.data.ownerUserId &&
+        request.resource.data.code == resource.data.code &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        // Can update name, memberCount, maxMembers
+        (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'memberCount', 'maxMembers', 'isPremium', 'premiumFeatures']));
+
+      // Only squad owner can delete
+      allow delete: if isSquadOwner(squadCode);
+    }
+
+    // ============================================
+    // MISSIONS COLLECTION
+    // ============================================
+    match /missions/{missionId} {
+      // Can read if user is in the same squad
+      allow read: if isSameSquad(resource.data.squadCode);
+
+      // User can create their own missions
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'squadCode', 'type', 'xpEarned', 'completedAt', 'date']) &&
+        // Validate mission type
+        request.resource.data.type in ['breakfast', 'lunch', 'dinner', 'snack', 'workout', 'hydration'] &&
+        // Validate XP range
+        request.resource.data.xpEarned >= 0 && request.resource.data.xpEarned <= 50 &&
+        // Validate water count for hydration missions
+        (request.resource.data.type != 'hydration' ||
+          (request.resource.data.waterCount >= 0 && request.resource.data.waterCount <= 5)) &&
+        // Validate date format
+        request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        // User must be in the specified squad
+        getUserData().squadCode == request.resource.data.squadCode;
+
+      // User can update their own missions (e.g., add photo URL)
+      allow update: if isOwner(resource.data.userId) &&
+        // Cannot change core fields
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.squadCode == resource.data.squadCode &&
+        request.resource.data.type == resource.data.type &&
+        request.resource.data.date == resource.data.date &&
+        // Can only update photoUrl and waterCount
+        (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['photoUrl', 'waterCount', 'xpEarned']));
+
+      // Missions cannot be deleted (preserve history)
+      allow delete: if false;
+    }
+
+    // ============================================
+    // WEEKLY RANKINGS COLLECTION
+    // ============================================
+    match /weeklyRankings/{rankingId} {
+      // Anyone authenticated can read rankings
+      allow read: if isAuthenticated();
+
+      // Rankings are created/updated by Cloud Functions
+      // Direct client writes are not allowed for the main document
+      allow create, update, delete: if false;
+
+      // User entries within rankings
+      match /users/{rankUserId} {
+        // Anyone in the squad can read the ranking entries
+        allow read: if isAuthenticated();
+
+        // Users can only update their own ranking entry
+        allow create, update: if isOwner(rankUserId) &&
+          request.resource.data.keys().hasAll(['name', 'weeklyXP', 'todayMissions', 'lastUpdated']) &&
+          request.resource.data.weeklyXP >= 0 &&
+          request.resource.data.todayMissions is list &&
+          request.resource.data.lastUpdated == request.time;
+
+        // Users can delete their own entry when leaving squad
+        allow delete: if isOwner(rankUserId);
+      }
+    }
+
+    // ============================================
+    // PREMIUM PLANS COLLECTION (Future)
+    // ============================================
+    match /premiumPlans/{planId} {
+      // Anyone authenticated can read plans
+      allow read: if isAuthenticated();
+
+      // Only admin can manage plans (via Firebase Console)
+      allow create, update, delete: if false;
+    }
+
+    // ============================================
+    // APP CONFIG COLLECTION
+    // ============================================
+    match /config/{configId} {
+      // Anyone can read app configuration
+      allow read: if true;
+
+      // Only admin can manage config (via Firebase Console)
+      allow create, update, delete: if false;
+    }
+
+    // ============================================
+    // NOTIFICATIONS COLLECTION (Future)
+    // ============================================
+    match /notifications/{notificationId} {
+      // User can read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      // Notifications are created by Cloud Functions
+      allow create, update, delete: if false;
+    }
+  }
+}
